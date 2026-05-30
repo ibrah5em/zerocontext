@@ -8,13 +8,15 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "rules"
   ],
   "scripts": {
     "test": "node --test"
   },
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "gpt-tokenizer": "^2.9.0"
   }
 }
