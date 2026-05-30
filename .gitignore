@@ -26,6 +26,9 @@ logs/
 .zerocontext/
 *.sock
 
+# Local MCP client config (machine-specific absolute paths; see probe/README.md)
+.mcp.json
+
 # OS / editor
 .DS_Store
 Thumbs.db

@@ -1,0 +1,14 @@
+{
+  "name": "zerocontext-probe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "THROWAWAY Phase 0 spike — a logging MCP server. Delete after the spike is recorded.",
+  "scripts": {
+    "start": "node server.mjs",
+    "log": "tail -f probe.log"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
