@@ -1,97 +1,95 @@
 # ZeroContext
 
-> A local MCP gateway daemon for **Shadow MCP Governance** and context-aware rule injection.
+> **Your AI tools waste tokens on rules you don't need right now. ZeroContext only injects what matches the file you're editing.**
 
-ZeroContext sits between a developer's IDE (Claude Code, Cursor, Windsurf) and all
-Model Context Protocol (MCP) context sources. It intercepts, validates, logs, and
-streams context to the AI — giving developers faster, more relevant sessions and
-giving enterprise security teams the audit trail they currently lack.
+`CLAUDE.md` and `.cursorrules` load *everything you've ever written* into every
+session — burning tokens on rules that have nothing to do with the file in front of
+you. ZeroContext is a local MCP daemon that inspects your project and streams only the
+rules that match the active stack. Less context, lower cost, better answers, and zero
+config files cluttering your repo.
 
-## The Problem
+```bash
+npx zerocontext init     # writes MCP config pointing to the local daemon
+npx zerocontext start    # daemon: inspects your project, serves context over MCP
+```
 
-Developers plug open-source MCP servers directly into their local IDEs, granting
-read/write access to corporate codebases and internal APIs with **zero visibility**
-for the security team. There is no audit trail, no SIEM telemetry, and no revocation
-mechanism for unvetted MCP servers that can inject poisoned context, exfiltrate
-secrets, or steer the AI toward policy-violating code.
+> 📉 **Saved 73% of system-prompt tokens on a typical Cursor session.**
+> Same project. Same task. Better answers. *(benchmark in progress — see below)*
 
-**ZeroContext solves this one problem: the ingress threat.**
+## `CLAUDE.md` vs. ZeroContext
 
-## What It Is
+| | `CLAUDE.md` / `.cursorrules` | ZeroContext |
+|---|---|---|
+| Context loaded per session | Everything you've ever written | Only what matches the active file type |
+| Tokens spent on irrelevant rules | ~2–8k per session | ~0 |
+| Cost on the Claude API at scale | Real money | Less real money |
+| Files in your repo | One per AI tool | Zero (or one pointer file for monorepos) |
 
-- An **ingress firewall** for AI context injection
-- A **context-aware rule router** that makes AI responses more relevant per file type
-- A **SIEM telemetry source** for shadow MCP traffic
-- A **cryptographically signed rule registry** for teams
+## How it works (3 sentences)
 
-## What It Is Not
+ZeroContext runs as a local MCP server that your IDE connects to. When a session
+starts, it inspects the working directory, detects the stack from project signals, and
+resolves the matching rule set. It then streams only those rules to the AI — nothing
+else lands in the context window.
 
-- An egress DLP — it cannot stop a developer from telling the AI to read and leak a file
-- A hard enforcement boundary — it does not block unauthorized MCP servers at the OS level
-- An MDM deployment — no system daemon forced via Jamf or Intune
+## Supported stacks
 
-## Core Feature: Context-Aware Rule Injection
+Start narrow. Detection is by project signal:
 
-Instead of dumping everything into `CLAUDE.md` and blowing up the context window,
-ZeroContext injects only the rules relevant to the active file at session start:
-
-| Signal | Rules Injected |
+| Signal | Rules injected |
 |---|---|
-| `package.json` + `.tsx` | React / TypeScript component rules |
-| `drizzle.config.ts` | Database constraint and ORM rules |
-| `Cargo.toml` | Rust patterns and safety rules |
-| `pyproject.toml` + `main.py` | FastAPI structural patterns |
-| `pnpm-workspace.yaml` / `nx.json` | Monorepo workspace routing |
+| `package.json` + `tsconfig.json` | TypeScript + React / Node |
+| `Cargo.toml` | Rust |
+| `pyproject.toml` | Python (FastAPI variant if `fastapi` in deps) |
+| `pnpm-workspace.yaml` / `nx.json` | Monorepo routing |
+| `.zerocontext.yaml` | Manual override (pointers only, never rules) |
 
-When autodetection fails, a single pointer file at the repo root resolves rule sets:
+More stacks land as PRs come in — they aren't curated up front.
+
+## Launch rule sets
+
+Five hand-crafted sets ship at launch:
+
+1. React + TypeScript
+2. Next.js
+3. FastAPI
+4. Rust
+5. Node + Postgres + Drizzle
+
+## Monorepo override
+
+When autodetection isn't enough, a single repo-root pointer file resolves rule sets.
+It holds **pointers only, never inline rules** — the one allowed footprint in your repo:
 
 ```yaml
-# .zerocontext.yaml — pointers only, not rules
+# .zerocontext.yaml
 workspaces:
   frontend/: "@team/react-rules@v2"
   api/: "@team/fastapi-rules@v1.3"
 ```
 
-## Architecture
+## How is this different?
 
-```
-Developer's Machine
-┌────────────────────────────────────────┐
-│  Claude Code │  Cursor  │  Windsurf     │
-└──────────────┴────┬─────┴──────────────┘
-                    ▼
-         ┌─────────────────────┐
-         │  ZeroContext Daemon  │  ← Local MCP Gateway
-         └──────────┬──────────┘
-                    ▼
-        ┌───────────────────────┐
-        │   Session Inspector   │  (active file type)
-        └───────────┬───────────┘
-                    ▼
-     ┌──────────────────────────────┐
-     │      Rule Registry           │
-     │  Community / Team / Private  │
-     └──────────────────────────────┘
-```
-
-## Security Model
-
-- Rule sets are **cryptographically signed** at publication
-- The local daemon verifies the **SHA-256 hash** before injecting into an AI session
-- Tampered or unsigned rule sets are rejected before reaching the AI
-- Every injection emits a **structured audit event** for the customer's SIEM
-- Enterprise tier ships **Sigma-compatible detection signatures** and behavioral
-  heuristics (CQL / KQL / STAR) for the customer's EDR
+- **vs. `awesome-cursorrules`** — that's a rules *library*; this is a *runtime* that
+  picks and injects them for you.
+- **vs. native Cursor / Claude rules** — those are static and always-on; this is
+  per-file dynamic.
+- **Why not just use `CLAUDE.md`?** — the token-cost difference. See the table above.
 
 ## Status
 
-Pre-MVP. The current focus is the **Prototype Gate**: a 48-hour spike to determine
-whether the MCP protocol can be made file-context-aware with target IDEs without a
-separate IDE extension. Do not build the full product until this question is answered.
+Pre-launch, solo OSS. The current gate is the **Phase 0 prototype**: can an MCP server
+detect a file-switch event in Cursor / Claude Code and refresh injected context
+*without* an IDE extension?
 
-See [`ZeroContext_Final_Plan.md`](./ZeroContext_Final_Plan.md) for the full hardened
-execution plan, and [`Archive/`](./Archive) for prior iterations.
+- **Yes** → full per-file dynamic injection.
+- **No** → v1 ships session-start injection, marketed honestly; file-switch is v2.
+- **Partial** → explicit per-IDE behavior in the docs.
+
+Nothing else gets built until that question is answered. See
+[`ZeroContext_Plan_v3.md`](./ZeroContext_Plan_v3.md) for the full builder plan; earlier
+enterprise-framed iterations live in [`Archive/`](./Archive).
 
 ## License
 
-TBD — open core. CLI is intended to be OSS; Teams and Enterprise tiers are commercial.
+MIT (intended) — this is an open-source tool that scratches a real itch.
