@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+target/
+__pycache__/
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
+
+# Local daemon state
+.zerocontext/
+*.sock
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Claude Code local settings (keep shared config tracked)
+.claude/settings.local.json
