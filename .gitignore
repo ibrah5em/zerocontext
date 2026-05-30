@@ -34,3 +34,6 @@ Thumbs.db
 
 # Claude Code config (entire folder ignored)
 .claude/
+
+# Planning docs / prior iterations (local reference, not tracked)
+Archive/
