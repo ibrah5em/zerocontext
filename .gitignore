@@ -32,5 +32,5 @@ Thumbs.db
 .idea/
 *.swp
 
-# Claude Code local settings (keep shared config tracked)
-.claude/settings.local.json
+# Claude Code config (entire folder ignored)
+.claude/
