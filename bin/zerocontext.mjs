@@ -31,7 +31,7 @@ function parseFlags(argv) {
 const [, , cmd, ...rest] = process.argv;
 const flags = parseFlags(rest);
 
-if (!cmd || flags.help || cmd === "help") {
+if (!cmd || flags.help || cmd === "help" || cmd === "-h" || cmd === "--help") {
   console.log(USAGE);
   process.exit(0);
 }
@@ -50,10 +50,22 @@ switch (cmd) {
     break;
   }
   case "init":
-  case "serve":
-    console.error(`\`${cmd}\` is not implemented yet (coming in Phase 1).`);
+  case "serve": {
+    const willDo =
+      cmd === "init"
+        ? "write the MCP config that points your AI client at the local ZeroContext server"
+        : "run the stdio MCP server that serves only the rules matching the file you're working on";
+    // Lead with what the command delivers (CLAUDE.md: value first), stay honest
+    // that it's unshipped, point at what works, and exit non-zero so nothing
+    // mistakes a stub for a finished command.
+    console.error(
+      `zerocontext ${cmd} will ${willDo}.\n` +
+        `Coming in Phase 1 — not built yet.\n` +
+        `Available now:  zerocontext analyze   (see what your CLAUDE.md costs per message)`,
+    );
     process.exit(1);
     break;
+  }
   default:
     console.error(`Unknown command: ${cmd}\n`);
     console.log(USAGE);
