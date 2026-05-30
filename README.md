@@ -14,8 +14,8 @@ npx zerocontext serve     # stdio MCP server: inspects your project, serves matc
 npx zerocontext analyze   # see what your CLAUDE.md / .cursorrules costs you per message
 ```
 
-> 📉 **Target: ~70% fewer rule tokens per message vs. a full `CLAUDE.md`.**
-> Same project. Same task. Better answers. *(benchmark in progress — real number, measured, lands here before launch.)*
+> 📉 **This repo's own `CLAUDE.md` costs 1,563 tokens on every message — a projected 78% fewer with just-in-time rules.**
+> Measured by `analyze` (o200k estimate; run it yourself below). The live same-task A/B benchmark lands here before launch.
 
 ## See your own cost in 5 seconds
 
@@ -24,14 +24,27 @@ Before installing anything, run `analyze` on any repo with a `CLAUDE.md` or
 
 ```text
 $ npx zerocontext analyze
-CLAUDE.md            1,847 lines   ≈ 6,200 tokens
-Injected per message every single message this session
-Relevant to a typical task        ≈ 18%
-                                  ────────────
-Wasted on rules you don't need    ≈ 5,100 tokens / message
+ZeroContext analyze — token cost of your AI rules
+Tokenizer: o200k_base (gpt-tokenizer) — proxy for Claude, ~±10–15% vs. Claude's exact count
+
+CLAUDE.md
+  1,563 tokens  ·  6,212 chars  ·  9 sections (avg 174 tok/section)
+  → added to every message you send your AI tool.
+
+  Projected with ZeroContext (just-in-time, 1 slice/task):
+    fixed overhead     135 tok   (MCP instructions + get_rules schema, measured)
+    + tool call(s)      40 tok   (assumption: agent writes 1 call)
+    + rule slice(s)    174 tok   (your avg section size)
+    = 349 tok/task   vs   1,563 tok/message preloaded
+
+  Projected savings: 78%  (1,214 tok/message)
+  Break-even: JIT wins once rules exceed ~349 tok. Yours: 1,563 ✓
 ```
 
-That's the whole problem in one number. ZeroContext fixes it.
+That's a real run on this repo — your numbers will differ, and bigger or polyglot rule
+files save more. The percentage is the headline (tokenizer-robust); the absolute count is
+a labeled estimate. If your rules fall below the break-even, `analyze` says so instead of
+inflating the number.
 
 ## `CLAUDE.md` vs. ZeroContext
 

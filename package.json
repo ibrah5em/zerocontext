@@ -1,0 +1,20 @@
+{
+  "name": "zerocontext",
+  "version": "0.0.1",
+  "description": "Serve only the AI rules that match the file you're working on — over MCP, just in time.",
+  "type": "module",
+  "bin": {
+    "zerocontext": "bin/zerocontext.mjs"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "gpt-tokenizer": "^2.9.0"
+  }
+}
