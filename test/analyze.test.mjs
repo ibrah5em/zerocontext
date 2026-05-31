@@ -50,32 +50,32 @@ test("analyzeText computes a real, non-trivial token count", () => {
   assert.ok(r.sectionCount >= 4);
 });
 
-test("JIT cost = overhead + slices*(call + avgSection)", () => {
+test("resident tokens = overhead + slices*(call + avgSection)", () => {
   const r = analyzeText(FIXTURE, { slices: 1 });
   assert.equal(r.overhead, overheadTokens());
-  assert.equal(r.jit, r.overhead + r.slices * (r.call + r.avgSection));
+  assert.equal(r.resident, r.overhead + r.slices * (r.call + r.avgSection));
 });
 
-test("savings is the baseline-vs-JIT ratio and matches the win flag", () => {
+test("reduction is the resident-token ratio and matches the win flag", () => {
   const r = analyzeText(FIXTURE, { slices: 1 });
-  const expected = (r.totalTokens - r.jit) / r.totalTokens;
-  assert.ok(Math.abs(r.savings - expected) < 1e-9);
-  assert.equal(r.wins, r.totalTokens > r.jit);
-  assert.equal(r.breakEven, r.jit);
+  const expected = (r.totalTokens - r.resident) / r.totalTokens;
+  assert.ok(Math.abs(r.reduction - expected) < 1e-9);
+  assert.equal(r.wins, r.totalTokens > r.resident);
+  assert.equal(r.breakEven, r.resident);
 });
 
 test("a tiny rule file falls below break-even (honest about losing)", () => {
   const tiny = "# Rules\n\nUse tabs.\n";
   const r = analyzeText(tiny, { slices: 1 });
   assert.equal(r.wins, false);
-  assert.ok(r.savings < 0);
+  assert.ok(r.reduction < 0);
 });
 
-test("more slices pulled erodes the savings", () => {
+test("more slices pulled erodes the reduction", () => {
   const one = analyzeText(FIXTURE, { slices: 1 });
   const many = analyzeText(FIXTURE, { slices: 4 });
-  assert.ok(many.jit > one.jit);
-  assert.ok(many.savings < one.savings);
+  assert.ok(many.resident > one.resident);
+  assert.ok(many.reduction < one.reduction);
 });
 
 test("formatReport renders without throwing and includes the headline number", () => {
@@ -83,4 +83,24 @@ test("formatReport renders without throwing and includes the headline number", (
   const out = formatReport("CLAUDE.md", r);
   assert.ok(out.includes("CLAUDE.md"));
   assert.ok(/tokens/.test(out));
+});
+
+test("formatReport frames the win as window-scoping, not cost savings", () => {
+  // A doc large enough to clear break-even, so we hit the "win" branch.
+  const big =
+    "# Rules\n\n" +
+    Array.from(
+      { length: 12 },
+      (_, i) =>
+        `## Section ${i}\n\n` +
+        "Use dependency injection and validate inputs carefully. ".repeat(8),
+    ).join("\n\n");
+  const r = analyzeText(big, { slices: 1 });
+  assert.ok(r.wins, "fixture must clear break-even to exercise the win branch");
+  const out = formatReport("CLAUDE.md", r);
+  // The headline is fewer resident tokens, not "savings" — the A/B showed JIT
+  // doesn't win on cost, so the word must not reappear in the user-facing report.
+  assert.ok(/fewer rule tokens in the window/.test(out));
+  assert.ok(/Scope, not \$/.test(out));
+  assert.ok(!/saving/i.test(out), "report must not claim 'savings'");
 });

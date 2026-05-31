@@ -15,8 +15,12 @@ The one-line pitch:
 > Your AI tools waste tokens on rules you don't need right now. ZeroContext serves only
 > the rules that match the code you're working on.
 
-The headline metric is **token savings vs. `CLAUDE.md`** — measured on real projects,
-same task, same model, only the context source changes.
+The headline metric is **rule tokens resident in the window vs. `CLAUDE.md`** — how much
+rule context you keep *out* of every message by serving only the matching slice. This is
+a scoping number, **not** a session-cost claim: the Phase 0 A/B found just-in-time ran
+cost-neutral-to-higher end to end (a preloaded `CLAUDE.md` is prompt-cached and every turn
+re-reads the whole window), so never market dollar/token savings. The pitch is relevance
+and a leaner window. See [[token-savings-economics]] and [[phase0-finding]] in memory.
 
 ## How it works
 
@@ -87,8 +91,10 @@ the injection path is proven on real usage.
   demand.
 - **Zero repo footprint**, with the single exception of an optional `.zerocontext.yaml`
   pointer file (pointers only, never inline rules).
-- **Instrument token savings from day one** so the README benchmark is a real query, not
-  a guess. No invented numbers — the 73% figure in the README is a target to measure.
+- **Instrument the resident-token metric from day one** so the README number is a real
+  `analyze` query, not a guess. No invented numbers, and **no dollar/token savings claim** —
+  the Phase 0 A/B settled that JIT is cost-neutral-to-higher in a multi-turn session. Report
+  "fewer rule tokens resident in the window," never "N% cheaper."
 - **Lead with the value, never the negative** in any user-facing copy: "just-in-time,
   per-file AI context over MCP," not "no more dotfiles."
 

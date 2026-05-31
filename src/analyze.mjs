@@ -1,12 +1,17 @@
 // `zerocontext analyze` — the shareable front door.
 //
 // Runs on anyone's repo and prints, with no API key required:
-//   1. What your CLAUDE.md / .cursorrules actually costs in tokens on every message
-//      (a real count of your file — not a guess).
-//   2. A projection of what ZeroContext would cost instead (just-in-time: a small
-//      fixed overhead + the one rule slice a task actually needs), and the break-even
-//      where JIT starts to win. The slice size is derived from your file's own
-//      section sizes, so the projection is grounded in your data, not invented.
+//   1. How many rule tokens your CLAUDE.md / .cursorrules keeps resident in the context
+//      window on every message (a real count of your file — not a guess).
+//   2. How many ZeroContext would keep resident instead (just-in-time: a small fixed
+//      overhead + the one slice a task actually needs), and the break-even where it
+//      keeps fewer. Slice size comes from your file's own sections, so it's grounded
+//      in your data, not invented.
+//
+// This is a *scoping* number (rule tokens in the window), NOT a session-cost number:
+// a preloaded CLAUDE.md is prompt-cached, so the win is relevance + a smaller window,
+// not a lower bill. The Phase 0 A/B found just-in-time ran cost-neutral-to-higher end
+// to end — never reframe this output as dollar/token savings. (See CLAUDE.md / memory.)
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, basename } from "node:path";
 import {
@@ -55,8 +60,12 @@ export function analyzeText(text, { slices = 1 } = {}) {
   const k = sections.length || 1;
   const avgSection = Math.round(totalTokens / k);
   const overhead = overheadTokens();
-  const jit = overhead + slices * (CALL_TOKENS + avgSection);
-  const savings = totalTokens > 0 ? (totalTokens - jit) / totalTokens : 0;
+  // Rule tokens ZeroContext leaves resident in the window for a task that pulls
+  // `slices` slices: the always-on MCP overhead + the call(s) + the slice text.
+  const resident = overhead + slices * (CALL_TOKENS + avgSection);
+  // Fewer rule tokens in the window vs. preloading the whole file. A *scoping*
+  // ratio (tokens resident), NOT a cost ratio — see the caveat in formatReport.
+  const reduction = totalTokens > 0 ? (totalTokens - resident) / totalTokens : 0;
   return {
     totalTokens,
     chars: text.length,
@@ -66,10 +75,10 @@ export function analyzeText(text, { slices = 1 } = {}) {
     overhead,
     call: CALL_TOKENS,
     slices,
-    jit,
-    savings,
-    breakEven: jit, // baseline (totalTokens) must exceed JIT cost for JIT to win
-    wins: totalTokens > jit,
+    resident,
+    reduction,
+    breakEven: resident, // preloaded total must exceed this for ZeroContext to keep fewer resident
+    wins: totalTokens > resident,
   };
 }
 
@@ -82,12 +91,12 @@ export function formatReport(fileName, r) {
       `${r.sectionCount} section${r.sectionCount === 1 ? "" : "s"} ` +
       `(avg ${n(r.avgSection)} tok/section)`,
   );
-  lines.push("  → added to every message you send your AI tool.");
+  lines.push("  → resident in your context window on every message, relevant or not.");
   lines.push("");
   lines.push(
-    `  Projected with ZeroContext (just-in-time, ${r.slices} slice${
+    `  With ZeroContext (just-in-time, ${r.slices} slice${
       r.slices === 1 ? "" : "s"
-    }/task):`,
+    }/task) — rule tokens resident in the window:`,
   );
   lines.push(
     `    fixed overhead  ${n(r.overhead).padStart(6)} tok   (MCP instructions + get_rules schema, measured)`,
@@ -99,22 +108,28 @@ export function formatReport(fileName, r) {
     `    + rule slice(s) ${n(r.avgSection * r.slices).padStart(6)} tok   (your avg section size)`,
   );
   lines.push(
-    `    = ${n(r.jit)} tok/task   vs   ${n(r.totalTokens)} tok/message preloaded`,
+    `    = ${n(r.resident)} tok resident   vs   ${n(r.totalTokens)} tok preloaded (every message)`,
   );
   lines.push("");
   if (r.wins) {
     lines.push(
-      `  Projected savings: ${pct(r.savings)}  (${n(r.totalTokens - r.jit)} tok/message)`,
+      `  → ${pct(r.reduction)} fewer rule tokens in the window  (${n(r.totalTokens - r.resident)} tok)`,
     );
     lines.push(
-      `  Break-even: JIT wins once rules exceed ~${n(r.breakEven)} tok. Yours: ${n(r.totalTokens)} ✓`,
+      `  Break-even: ZeroContext keeps fewer resident once rules exceed ~${n(r.breakEven)} tok. Yours: ${n(r.totalTokens)} ✓`,
+    );
+    lines.push(
+      "  Scope, not $: this is window-resident rule tokens, not session cost — a cached",
+    );
+    lines.push(
+      "  CLAUDE.md is ~free to re-read, so the win is relevance, not a lower bill. [Phase 0 A/B]",
     );
   } else {
     lines.push(
       `  Verdict: your rules (${n(r.totalTokens)} tok) are below the ~${n(r.breakEven)} tok break-even.`,
     );
     lines.push(
-      "  Preloading is cheaper here — ZeroContext pays off on larger / polyglot / monorepo rule files.",
+      "  Preloading keeps fewer tokens resident here — ZeroContext's window win shows on larger / polyglot / monorepo rule files.",
     );
   }
   return lines.join("\n");
@@ -129,7 +144,7 @@ export function discoverRuleFiles(cwd) {
 export function runAnalyze({ cwd = process.cwd(), file, slices = 1, log = console.log } = {}) {
   const targets = file ? [resolve(cwd, file)] : discoverRuleFiles(cwd);
 
-  log("ZeroContext analyze — token cost of your AI rules");
+  log("ZeroContext analyze — rule tokens resident in every message");
   log(`Tokenizer: ${TOKENIZER_LABEL}`);
   log("");
 
@@ -152,7 +167,8 @@ export function runAnalyze({ cwd = process.cwd(), file, slices = 1, log = consol
 
   log("Notes:");
   log("  • Ratio is tokenizer-robust; absolute tokens are an o200k estimate, not Claude-exact.");
-  log("  • A static CLAUDE.md is prompt-cached (~10% on reads), so $ savings < raw-token savings.");
+  log("  • This counts window-resident rule tokens, not session $. A preloaded CLAUDE.md is");
+  log("    prompt-cached, and the Phase 0 A/B found JIT cost-neutral-to-higher — the win is relevance.");
   log("  • Slice size is your file's average section; pass --slices N to model multi-slice tasks.");
   return 0;
 }

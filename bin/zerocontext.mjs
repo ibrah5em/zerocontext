@@ -11,8 +11,8 @@ Usage:
                           stack, and serves only the rule slice matching the file the
                           agent is editing (via the get_rules tool).
   zerocontext analyze [--file <path>] [--slices <n>]
-                          Print what your CLAUDE.md/.cursorrules costs in tokens
-                          per message, and the projected just-in-time cost.
+                          Print how many rule tokens your CLAUDE.md/.cursorrules keeps
+                          resident in every message, vs. just-in-time slices.
   zerocontext init        (coming next) write MCP config pointing at the local server.
 
 Options for serve:
@@ -75,7 +75,7 @@ switch (cmd) {
         "local ZeroContext server.\n" +
         "Coming next — not built yet.\n" +
         "Available now:  zerocontext serve     (run the MCP server)\n" +
-        "                zerocontext analyze   (see what your CLAUDE.md costs per message)",
+        "                zerocontext analyze   (see how many rule tokens your CLAUDE.md keeps in every message)",
     );
     process.exit(1);
     break;

@@ -3,48 +3,53 @@
 > **Your AI tools waste tokens on rules you don't need right now. ZeroContext serves only the rules that match the code you're working on.**
 
 `CLAUDE.md` and `.cursorrules` load *everything you've ever written* into every
-message — burning tokens on rules that have nothing to do with the code in front of
-you. ZeroContext is a local MCP server that inspects your project and hands the agent
-**only the rules it asks for, when it asks** — just-in-time, per file and stack. Less
-context, lower cost, better-targeted answers, and zero config files cluttering your repo.
+message — keeping rules resident in the window that have nothing to do with the code in
+front of you. ZeroContext is a local MCP server that inspects your project and hands the
+agent **only the rules it asks for, when it asks** — just-in-time, per file and stack. A
+smaller, sharper context window, better-targeted answers, and zero config files
+cluttering your repo.
 
 ```bash
 npx zerocontext init      # writes MCP config pointing at the local server
 npx zerocontext serve     # stdio MCP server: inspects your project, serves matching rules on request
-npx zerocontext analyze   # see what your CLAUDE.md / .cursorrules costs you per message
+npx zerocontext analyze   # see how many rule tokens your CLAUDE.md / .cursorrules keeps in every message
 ```
 
-> 📉 **This repo's own `CLAUDE.md` costs 1,563 tokens on every message — a projected 78% fewer with just-in-time rules.**
-> Measured by `analyze` (o200k estimate; run it yourself below). The live same-task A/B benchmark lands here before launch.
+> 📊 **This repo's own `CLAUDE.md` keeps 1,563 rule tokens resident in every message's context window — ZeroContext keeps ~78% of them out, serving only the slice the task needs.**
+> Measured by `analyze` (o200k estimate; run it yourself below). This is a *window-scoping* number, not a lower bill: a preloaded `CLAUDE.md` is prompt-cached, so the real win is relevance + a smaller window. (Phase 0 A/B: just-in-time ran cost-neutral-to-higher end to end — we don't claim dollar savings.)
 
-## See your own cost in 5 seconds
+## See your own rule-token footprint in 5 seconds
 
 Before installing anything, run `analyze` on any repo with a `CLAUDE.md` or
 `.cursorrules`:
 
 ```text
 $ npx zerocontext analyze
-ZeroContext analyze — token cost of your AI rules
+ZeroContext analyze — rule tokens resident in every message
 Tokenizer: o200k_base (gpt-tokenizer) — proxy for Claude, ~±10–15% vs. Claude's exact count
 
 CLAUDE.md
   1,563 tokens  ·  6,212 chars  ·  9 sections (avg 174 tok/section)
-  → added to every message you send your AI tool.
+  → resident in your context window on every message, relevant or not.
 
-  Projected with ZeroContext (just-in-time, 1 slice/task):
+  With ZeroContext (just-in-time, 1 slice/task) — rule tokens resident in the window:
     fixed overhead     135 tok   (MCP instructions + get_rules schema, measured)
     + tool call(s)      40 tok   (assumption: agent writes 1 call)
     + rule slice(s)    174 tok   (your avg section size)
-    = 349 tok/task   vs   1,563 tok/message preloaded
+    = 349 tok resident   vs   1,563 tok preloaded (every message)
 
-  Projected savings: 78%  (1,214 tok/message)
-  Break-even: JIT wins once rules exceed ~349 tok. Yours: 1,563 ✓
+  → 78% fewer rule tokens in the window  (1,214 tok)
+  Break-even: ZeroContext keeps fewer resident once rules exceed ~349 tok. Yours: 1,563 ✓
+  Scope, not $: this is window-resident rule tokens, not session cost — a cached
+  CLAUDE.md is ~free to re-read, so the win is relevance, not a lower bill. [Phase 0 A/B]
 ```
 
 That's a real run on this repo — your numbers will differ, and bigger or polyglot rule
-files save more. The percentage is the headline (tokenizer-robust); the absolute count is
-a labeled estimate. If your rules fall below the break-even, `analyze` says so instead of
-inflating the number.
+files keep more out of the window. The percentage is the headline (tokenizer-robust); the
+absolute count is a labeled estimate. It measures **rule tokens resident in the window**,
+not session cost: a preloaded `CLAUDE.md` is prompt-cached, so ZeroContext's win is
+relevance and a leaner window, not a smaller bill. If your rules fall below the
+break-even, `analyze` says so instead of inflating the number.
 
 ## `CLAUDE.md` vs. ZeroContext
 
@@ -52,8 +57,8 @@ inflating the number.
 |---|---|---|
 | When rules load | Front-loaded into every message | Pulled by the agent, only when it needs them |
 | What loads | Everything you've ever written | Only the slice matching the active file / stack |
-| Tokens spent on irrelevant rules | ~2–8k per message | ~0 |
-| Cost on the Claude API at scale | Real money | Less real money |
+| Irrelevant rule tokens resident in the window | ~2–8k per message | ~0 |
+| What the agent's attention is on | Every rule, every turn | The rules that match the code in front of it |
 | Files in your repo | One per AI tool | Zero (or one pointer file for monorepos) |
 
 ## How it works (3 sentences)
@@ -110,17 +115,20 @@ workspaces:
   picks the right slice and serves it to the agent on demand.
 - **vs. native Cursor / Claude rules** — those are static and front-loaded; ZeroContext
   is just-in-time, so the tokens only land when a rule is actually relevant.
-- **Why not just use `CLAUDE.md`?** — the per-message token cost. Run `analyze` and see
-  it for yourself.
+- **Why not just use `CLAUDE.md`?** — it keeps every rule you've ever written resident in
+  the window on every message, relevant or not. Run `analyze` to see your footprint.
 
 ## Status
 
-Pre-launch, solo OSS. The current gate is the **Phase 0 prototype**: confirm
-empirically that the agent calls the `get_rules` tool mid-task, and measure how many
-tokens that saves vs. a preloaded `CLAUDE.md`. The mechanism we build and market is
-**agent-pulled, just-in-time** injection (plus optional session-start) — reactive
-file-switch is *not* promised, because it isn't available to a terminal agent without an
-IDE extension.
+Pre-launch, solo OSS. **Phase 0 is resolved.** In a live headless session the agent
+called `get_rules` on its own and got back the correct stack-matching slice, so
+agent-pulled just-in-time injection works end to end. The honest metric is **rule tokens
+resident in the window** (what `analyze` reports), *not* session cost: the same-task A/B
+found just-in-time ran cost-neutral-to-higher, because a preloaded `CLAUDE.md` is
+prompt-cached and every turn re-reads the whole window anyway. So the pitch is relevance
+and a leaner window — never a lower bill. The mechanism we build and market is
+**agent-pulled, just-in-time** (plus optional session-start); reactive file-switch is
+*not* promised, because it isn't available to a terminal agent without an IDE extension.
 
 Nothing user-facing claims behavior that isn't built. See
 [`ZeroContext_Plan_v3.md`](./ZeroContext_Plan_v3.md) for the full builder plan; earlier

@@ -38,7 +38,7 @@ export function buildResponse({ path, task, active }) {
     return "ZeroContext: no rule sets are active for this project. Nothing to inject — proceed.";
   }
   // No path given: hand back everything active, and ask for a path so next time the
-  // agent gets a narrower (cheaper) slice.
+  // agent gets a narrower (leaner-window) slice.
   if (!path) {
     const body = active.map((s) => sectionFor(s, null)).join("\n\n---\n\n");
     return (
