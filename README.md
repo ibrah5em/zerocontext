@@ -59,7 +59,7 @@ break-even, `analyze` says so instead of inflating the number.
 | What loads | Everything you've ever written | Only the slice matching the active file / stack |
 | Irrelevant rule tokens resident in the window | ~2–8k per message | ~0 |
 | What the agent's attention is on | Every rule, every turn | The rules that match the code in front of it |
-| Files in your repo | One per AI tool | Zero (or one pointer file for monorepos) |
+| Files in your repo | One per AI tool | Zero |
 
 ## How it works (3 sentences)
 
@@ -77,15 +77,17 @@ extension required.
 
 Start narrow. Detection is by project signal:
 
-| Signal | Rules served |
+| Signal | Rule set served |
 |---|---|
-| `package.json` + `tsconfig.json` | TypeScript + React / Node |
+| `next.config.*` or a `next` dependency | Next.js (also activates React + TypeScript) |
+| `tsconfig.json` + a `react`/`react-dom` dependency | React + TypeScript |
+| `drizzle.config.*` or `drizzle-orm` + `pg`/`postgres` | Node + Postgres + Drizzle |
+| `pyproject.toml` with a `fastapi` dependency | FastAPI |
 | `Cargo.toml` | Rust |
-| `pyproject.toml` | Python (FastAPI variant if `fastapi` in deps) |
-| `pnpm-workspace.yaml` / `nx.json` | Monorepo routing |
-| `.zerocontext.yaml` | Manual override (pointers only, never rules) |
 
-More stacks land as PRs come in — they aren't curated up front.
+Detection is additive: a Next.js app is also React + TypeScript, so both sets activate
+and each file gets only the slices whose globs match it. More stacks land as PRs come in
+— they aren't curated up front.
 
 ## Launch rule sets
 
@@ -97,17 +99,22 @@ Five hand-crafted sets ship at launch:
 4. Rust
 5. Node + Postgres + Drizzle
 
-## Monorepo override
+## Monorepo override (planned)
 
-When autodetection isn't enough, a single repo-root pointer file resolves rule sets.
-It holds **pointers only, never inline rules** — the one allowed footprint in your repo:
+Not wired yet — autodetection handles single-stack repos today. The intended shape: a
+single repo-root `.zerocontext.yaml` maps a path prefix to a **bundled rule-set name**, so
+each workspace gets the right slice. Pointers only, never inline rules — the one allowed
+footprint in your repo:
 
 ```yaml
-# .zerocontext.yaml
-workspaces:
-  frontend/: "@team/react-rules@v2"
-  api/: "@team/fastapi-rules@v1.3"
+# .zerocontext.yaml — planned, not yet read by the server
+version: 1
+routes:
+  apps/web: nextjs
+  services/api: fastapi
 ```
+
+Follow this section for monorepo routing as it lands.
 
 ## How is this different?
 
@@ -130,9 +137,8 @@ and a leaner window — never a lower bill. The mechanism we build and market is
 **agent-pulled, just-in-time** (plus optional session-start); reactive file-switch is
 *not* promised, because it isn't available to a terminal agent without an IDE extension.
 
-Nothing user-facing claims behavior that isn't built. See
-[`ZeroContext_Plan_v3.md`](./ZeroContext_Plan_v3.md) for the full builder plan; earlier
-enterprise-framed iterations live in [`Archive/`](./Archive).
+Nothing user-facing claims behavior that isn't built — this README tracks only what
+actually ships today.
 
 ## License
 

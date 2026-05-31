@@ -32,13 +32,73 @@ test("pyproject.toml without fastapi => plain python", () => {
   assert.ok(!s.has("fastapi"));
 });
 
-test("package.json + tsconfig.json => react-typescript", () => {
-  const s = detectWith({ "package.json": "{}", "tsconfig.json": "{}" });
+test("tsconfig + a react dep => react-typescript", () => {
+  const s = detectWith({
+    "package.json": JSON.stringify({ dependencies: { react: "^18" } }),
+    "tsconfig.json": "{}",
+  });
   assert.ok(s.has("react-typescript"));
+});
+
+test("tsconfig without a react dep is not react-typescript", () => {
+  const s = detectWith({ "package.json": "{}", "tsconfig.json": "{}" });
+  assert.ok(!s.has("react-typescript"));
 });
 
 test("package.json alone (no tsconfig) is not react-typescript", () => {
   const s = detectWith({ "package.json": "{}" });
+  assert.ok(!s.has("react-typescript"));
+});
+
+test("a next dep => nextjs, and react-typescript too (Next is React+TS)", () => {
+  const s = detectWith({
+    "package.json": JSON.stringify({ dependencies: { next: "^14", react: "^18" } }),
+    "tsconfig.json": "{}",
+  });
+  assert.ok(s.has("nextjs"));
+  assert.ok(s.has("react-typescript"));
+});
+
+test("a next.config file => nextjs even without the dep", () => {
+  const s = detectWith({
+    "package.json": "{}",
+    "next.config.mjs": "export default {};\n",
+  });
+  assert.ok(s.has("nextjs"));
+});
+
+test("drizzle-orm + pg => node-postgres-drizzle", () => {
+  const s = detectWith({
+    "package.json": JSON.stringify({
+      dependencies: { "drizzle-orm": "^0.30", pg: "^8" },
+    }),
+  });
+  assert.ok(s.has("node-postgres-drizzle"));
+});
+
+test("a drizzle.config file => node-postgres-drizzle", () => {
+  const s = detectWith({
+    "package.json": "{}",
+    "drizzle.config.ts": "export default {};\n",
+  });
+  assert.ok(s.has("node-postgres-drizzle"));
+});
+
+test("drizzle-orm without a postgres driver => no drizzle set", () => {
+  const s = detectWith({
+    "package.json": JSON.stringify({ dependencies: { "drizzle-orm": "^0.30" } }),
+  });
+  assert.ok(!s.has("node-postgres-drizzle"));
+});
+
+test("a TypeScript Drizzle backend is not mislabeled react-typescript", () => {
+  const s = detectWith({
+    "package.json": JSON.stringify({
+      dependencies: { "drizzle-orm": "^0.30", pg: "^8", express: "^4" },
+    }),
+    "tsconfig.json": "{}",
+  });
+  assert.ok(s.has("node-postgres-drizzle"));
   assert.ok(!s.has("react-typescript"));
 });
 
