@@ -6,11 +6,38 @@
   "bin": {
     "zerocontext": "bin/zerocontext.mjs"
   },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "claude-code",
+    "cursor",
+    "ai",
+    "llm",
+    "context",
+    "rules",
+    "tokens",
+    "prompt-engineering"
+  ],
+  "homepage": "https://github.com/ibrah5em/zerocontext#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibrah5em/zerocontext.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ibrah5em/zerocontext/issues"
+  },
+  "author": "ibrah5em <ebrahym.das@gmail.com>",
   "files": [
     "bin",
     "src",
-    "rules"
+    "rules",
+    "LICENSE",
+    "README.md"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "node --test"
   },

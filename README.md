@@ -59,7 +59,8 @@ break-even, `analyze` says so instead of inflating the number.
 | What loads | Everything you've ever written | Only the slice matching the active file / stack |
 | Irrelevant rule tokens resident in the window | ~2–8k per message | ~0 |
 | What the agent's attention is on | Every rule, every turn | The rules that match the code in front of it |
-| Files in your repo | One per AI tool | Zero |
+| Rule files in your repo | One per AI tool | Zero (rules live in the server, served on demand) |
+| Config footprint | The rule file itself | One gitignored `.mcp.json` pointer — no rules |
 
 ## How it works (3 sentences)
 
@@ -142,4 +143,4 @@ actually ships today.
 
 ## License
 
-MIT (intended) — this is an open-source tool that scratches a real itch.
+MIT — see [LICENSE](LICENSE). An open-source tool that scratches a real itch.

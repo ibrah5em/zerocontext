@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// ZeroContext CLI. `analyze` and `serve` are implemented; `init` arrives next.
+// ZeroContext CLI. `analyze`, `serve`, and `init` are implemented.
 import { resolve } from "node:path";
 import { runAnalyze } from "../src/analyze.mjs";
+import { runInit } from "../src/init.mjs";
 
 const USAGE = `zerocontext — serve only the AI rules that match the file you're working on.
 
@@ -13,7 +14,10 @@ Usage:
   zerocontext analyze [--file <path>] [--slices <n>]
                           Print how many rule tokens your CLAUDE.md/.cursorrules keeps
                           resident in every message, vs. just-in-time slices.
-  zerocontext init        (coming next) write MCP config pointing at the local server.
+  zerocontext init [--root <dir>] [--print]
+                          Write (merge) the Claude Code MCP config so the client spawns
+                          the local server per session. Targets .mcp.json at the root;
+                          preserves any servers already there.
 
 Options for serve:
   --root <dir>    Project directory to inspect (default: current directory).
@@ -21,6 +25,10 @@ Options for serve:
 Options for analyze:
   --file <path>   Analyze a specific rule file instead of auto-discovering.
   --slices <n>    Rule slices a typical task pulls (default 1).
+
+Options for init:
+  --root <dir>    Project directory to wire up (default: current directory).
+  --print         Dry run: print the config to add instead of writing it.
 `;
 
 function parseFlags(argv) {
@@ -31,6 +39,7 @@ function parseFlags(argv) {
     else if (a === "--root") flags.root = argv[++i];
     else if (a === "--slices") flags.slices = Number(argv[++i]);
     else if (a === "--exact") flags.exact = true;
+    else if (a === "--print") flags.print = true;
     else if (a === "--help" || a === "-h") flags.help = true;
   }
   return flags;
@@ -67,17 +76,7 @@ switch (cmd) {
     break;
   }
   case "init": {
-    // Lead with what the command delivers (CLAUDE.md: value first), stay honest
-    // that it's unshipped, point at what works, and exit non-zero so nothing
-    // mistakes a stub for a finished command.
-    console.error(
-      "zerocontext init will write the MCP config that points your AI client at the " +
-        "local ZeroContext server.\n" +
-        "Coming next — not built yet.\n" +
-        "Available now:  zerocontext serve     (run the MCP server)\n" +
-        "                zerocontext analyze   (see how many rule tokens your CLAUDE.md keeps in every message)",
-    );
-    process.exit(1);
+    process.exit(runInit({ root: flags.root, print: flags.print }));
     break;
   }
   default:
