@@ -3,7 +3,8 @@ name: nextjs
 version: 1.0.0
 description: Next.js App Router conventions — server/client components, data, routing
 stack_signals: [next.config.js, next.config.mjs, next.config.ts]
-globs: ["app/**/*.tsx", "app/**/*.ts"]
+globs: ["app/**/*.tsx", "app/**/*.ts", "src/app/**/*.tsx", "src/app/**/*.ts"]
+exclude: ["**/*.test.tsx", "**/*.test.ts"]
 ---
 
 # Next.js (App Router) conventions

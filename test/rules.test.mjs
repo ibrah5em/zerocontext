@@ -1,9 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   parseFrontmatter,
   globToRegExp,
   matchesGlob,
+  loadRuleSet,
   loadRuleSets,
   matchRuleSets,
 } from "../src/rules.mjs";
@@ -15,6 +19,7 @@ version: 1.0.0
 description: "FastAPI: routing, deps"
 stack_signals: [pyproject.toml]
 globs: ["**/*.py", "**/*.pyi"]
+exclude: ["**/tests/**", "**/conftest.py"]
 ---
 body line one
 body line two
@@ -25,6 +30,7 @@ body line two
   assert.equal(meta.description, "FastAPI: routing, deps"); // colon inside value survives
   assert.deepEqual(meta.stack_signals, ["pyproject.toml"]);
   assert.deepEqual(meta.globs, ["**/*.py", "**/*.pyi"]);
+  assert.deepEqual(meta.exclude, ["**/tests/**", "**/conftest.py"]);
   assert.equal(body.trim(), "body line one\nbody line two");
 });
 
@@ -72,4 +78,50 @@ test("matchRuleSets returns only the slice whose globs match the path", () => {
   );
   assert.deepEqual(matchRuleSets(sets, "README.md"), []);
   assert.deepEqual(matchRuleSets(sets, undefined), []);
+});
+
+test("loadRuleSet defaults exclude to [] when frontmatter omits it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "zc-rules-"));
+  const file = join(dir, "minimal.md");
+  writeFileSync(file, `---\nname: minimal\nglobs: ["**/*.py"]\n---\nbody\n`);
+  const set = loadRuleSet(file);
+  rmSync(dir, { recursive: true, force: true });
+  assert.deepEqual(set.exclude, []);
+});
+
+test("matchRuleSets subtracts exclude: a glob hit that is also excluded does not match", () => {
+  const sets = [
+    { name: "fastapi", globs: ["**/*.py"], exclude: ["**/tests/**", "**/conftest.py"] },
+  ];
+  // app code matches; test code is carved back out by exclude.
+  assert.deepEqual(
+    matchRuleSets(sets, "app/api/routers/users.py").map((s) => s.name),
+    ["fastapi"],
+  );
+  assert.deepEqual(matchRuleSets(sets, "tests/test_users.py"), []);
+  assert.deepEqual(matchRuleSets(sets, "app/conftest.py"), []);
+});
+
+// Regression guard for the dogfooding fixes — assert the REAL shipped sets, so a future
+// glob/exclude edit that re-breaks relevance fails here.
+test("shipped sets serve the right slice for representative paths", () => {
+  const sets = loadRuleSets();
+  const served = (path) => new Set(matchRuleSets(sets, path).map((s) => s.name));
+
+  // fastapi: app code in, tests + migrations out (the over-serve fix).
+  assert.ok(served("app/api/routers/users.py").has("fastapi"));
+  assert.ok(!served("tests/test_users.py").has("fastapi"));
+  assert.ok(!served("alembic/versions/1a2b3c_create_users.py").has("fastapi"));
+
+  // nextjs: the src/app layout now matches (the under-serve fix).
+  assert.ok(served("src/app/page.tsx").has("nextjs"));
+
+  // drizzle: a single-file schema.ts now matches (the under-serve fix).
+  assert.ok(served("src/schema.ts").has("node-postgres-drizzle"));
+  assert.ok(served("schema.ts").has("node-postgres-drizzle"));
+
+  // react-typescript: config + type-decl files no longer get component rules.
+  assert.ok(served("src/Button.tsx").has("react-typescript"));
+  assert.ok(!served("vite.config.ts").has("react-typescript"));
+  assert.ok(!served("src/env.d.ts").has("react-typescript"));
 });

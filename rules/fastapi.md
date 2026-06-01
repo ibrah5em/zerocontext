@@ -4,6 +4,7 @@ version: 1.0.0
 description: FastAPI service conventions — routing, Pydantic, async, dependencies, errors
 stack_signals: [pyproject.toml]
 globs: ["**/*.py"]
+exclude: ["**/tests/**", "**/test_*.py", "**/*_test.py", "**/conftest.py", "**/alembic/**", "**/migrations/**"]
 ---
 
 # FastAPI conventions

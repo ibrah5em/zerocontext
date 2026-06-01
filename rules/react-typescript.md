@@ -4,6 +4,7 @@ version: 1.0.0
 description: React + TypeScript component, hooks, and typing conventions
 stack_signals: [package.json, tsconfig.json]
 globs: ["**/*.tsx", "**/*.ts"]
+exclude: ["**/*.test.tsx", "**/*.test.ts", "**/*.d.ts", "**/*.config.ts"]
 ---
 
 # React + TypeScript conventions

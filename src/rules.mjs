@@ -107,6 +107,10 @@ export function loadRuleSet(file, log = (m) => process.stderr.write(m + "\n")) {
   if (globs.length === 0) {
     log(`zerocontext: rule set "${meta.name}" has no \`globs\` — it can never match a file`);
   }
+  // Optional `exclude` globs carve files back OUT of the `globs` match — so a broad
+  // `**/*.py` can still skip tests, migrations, and config, where the stack's rules
+  // don't apply. Empty when absent.
+  const exclude = Array.isArray(meta.exclude) ? meta.exclude : [];
   const text = body.trim();
   return {
     name: meta.name,
@@ -114,6 +118,7 @@ export function loadRuleSet(file, log = (m) => process.stderr.write(m + "\n")) {
     description: meta.description || "",
     stackSignals: Array.isArray(meta.stack_signals) ? meta.stack_signals : [],
     globs,
+    exclude,
     body: text,
     tokens: countTokens(text),
   };
@@ -129,8 +134,17 @@ export function loadRuleSets(dir = RULES_DIR, log) {
     .filter(Boolean);
 }
 
-// Return the rule sets whose globs match `path`, preserving input order.
+// Return the rule sets that apply to `path`, preserving input order. A set applies
+// when one of its `globs` matches AND none of its `exclude` globs match — so a set can
+// claim a broad surface (`**/*.py`) yet still opt specific files (tests, migrations,
+// config) back out. `exclude` is optional; treat its absence as "exclude nothing".
 export function matchRuleSets(sets, path) {
   if (!path) return [];
-  return sets.filter((s) => s.globs.some((g) => matchesGlob(path, g)));
+  return sets.filter((s) => {
+    const exclude = s.exclude || [];
+    return (
+      s.globs.some((g) => matchesGlob(path, g)) &&
+      !exclude.some((g) => matchesGlob(path, g))
+    );
+  });
 }

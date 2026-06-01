@@ -77,6 +77,16 @@ PRs after launch; don't curate stacks you don't write.
 dogfood on (detected via `pyproject.toml` + a `fastapi` dep). The other four follow once
 the injection path is proven on real usage.
 
+**Rule matching is glob + exclude.** Each set declares `globs` (the files it applies to)
+and an optional `exclude` (files to carve back out). A set applies to a path when a glob
+matches *and* no exclude does — so a broad `**/*.py` can still skip tests, migrations, and
+config, where the stack's rules are the wrong advice. Dogfooding the FastAPI set on a
+realistic layout is what surfaced the need: `**/*.py` alone was serving route/`response_model`
+rules to `tests/`, `conftest.py`, and `alembic/` migrations. Authoring details (when to
+reach for `exclude`) live in the `rule-registry` skill. Keep `globs` broad and subtract with
+`exclude` rather than enumerating every source dir — layouts vary too much, and a too-narrow
+glob just under-serves the bullseye file.
+
 ## Hard constraints — read before building
 
 - **Phase 0 prototype gate first.** Before writing real product code, resolve

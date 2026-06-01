@@ -4,6 +4,7 @@ version: 1.0.0
 description: Rust conventions — error handling, ownership, async, and API design
 stack_signals: [Cargo.toml]
 globs: ["**/*.rs"]
+exclude: ["**/tests/**", "**/build.rs"]
 ---
 
 # Rust conventions
