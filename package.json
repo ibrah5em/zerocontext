@@ -1,6 +1,6 @@
 {
   "name": "zerocontext",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Serve only the AI rules that match the file you're working on — over MCP, just in time.",
   "type": "module",
   "bin": {
