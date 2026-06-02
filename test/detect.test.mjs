@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detectStacks } from "../src/detect.mjs";
+import { detectStacks, suggestNestedRoots } from "../src/detect.mjs";
 
 // Build a throwaway project dir with the given files, run detect, clean up.
 function detectWith(files) {
@@ -110,4 +110,38 @@ test("Cargo.toml => rust; nx.json => monorepo", () => {
 
 test("an empty project detects nothing", () => {
   assert.equal(detectWith({}).size, 0);
+});
+
+// suggestNestedRoots: the full-stack-template layout (real project one level down).
+test("suggestNestedRoots finds a stack in a child dir when the root has none", () => {
+  const dir = mkdtempSync(join(tmpdir(), "zc-nested-"));
+  try {
+    mkdirSync(join(dir, "backend"));
+    writeFileSync(join(dir, "backend", "pyproject.toml"), 'dependencies = ["fastapi"]\n');
+    mkdirSync(join(dir, "frontend"));
+    writeFileSync(
+      join(dir, "frontend", "package.json"),
+      JSON.stringify({ dependencies: { next: "^14", react: "^18" } }),
+    );
+    writeFileSync(join(dir, "frontend", "tsconfig.json"), "{}");
+
+    assert.equal(detectStacks(dir).size, 0, "root itself has no signal");
+    const found = suggestNestedRoots(dir);
+    const byDir = Object.fromEntries(found.map((f) => [f.dir, f.stacks]));
+    assert.ok(byDir.backend.includes("fastapi"));
+    assert.ok(byDir.frontend.includes("nextjs"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("suggestNestedRoots skips node_modules and dot-dirs", () => {
+  const dir = mkdtempSync(join(tmpdir(), "zc-nested-"));
+  try {
+    mkdirSync(join(dir, "node_modules"));
+    writeFileSync(join(dir, "node_modules", "Cargo.toml"), "[package]\n");
+    assert.equal(suggestNestedRoots(dir).length, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

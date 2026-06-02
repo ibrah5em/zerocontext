@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { MCP_INSTRUCTIONS, GET_RULES_TOOL, countTokens } from "./tokens.mjs";
 import { loadRuleSets, matchRuleSets } from "./rules.mjs";
-import { detectStacks } from "./detect.mjs";
+import { detectStacks, suggestNestedRoots } from "./detect.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -84,8 +84,19 @@ export async function serve({
       active.map((s) => `${s.name} (${s.tokens} tok)`).join(", ") || "none"
     }`,
   );
-  if (detected.size > 0 && active.length === 0) {
-    log("  (stacks detected but no rule set ships for them yet — nothing to serve)");
+  if (active.length === 0) {
+    const shipped = new Set(allSets.map((s) => s.name));
+    const nested = suggestNestedRoots(root)
+      .map((n) => ({ dir: n.dir, sets: n.stacks.filter((s) => shipped.has(s)) }))
+      .filter((n) => n.sets.length > 0);
+    if (nested.length > 0) {
+      log("  no rule set is active at this root, but a subdirectory has one:");
+      for (const n of nested) {
+        log(`    ./${n.dir} (${n.sets.join(", ")}) — restart with --root ${n.dir}`);
+      }
+    } else if (detected.size > 0) {
+      log("  (stacks detected but no rule set ships for them yet — nothing to serve)");
+    }
   }
 
   const server = new Server(

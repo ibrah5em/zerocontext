@@ -7,7 +7,7 @@
 //
 // Multiple stacks can be active at once: a Next.js app is also React + TypeScript, so
 // both names are emitted and the per-file globs decide which slice a given file gets.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 function reader(root) {
@@ -87,4 +87,35 @@ export function detectStacks(root) {
   if (has("pnpm-workspace.yaml") || has("nx.json")) stacks.add("monorepo");
 
   return stacks;
+}
+
+// Directories never worth descending into when looking for a nested project root.
+const SKIP_DIRS = new Set([
+  "node_modules", "dist", "build", "target", "__pycache__",
+  ".venv", "venv", ".next", "coverage", ".git",
+]);
+
+// When the root itself detects nothing, look ONE level down. Many of the most
+// popular templates a new user reaches for put the real project in a subdir —
+// full-stack-fastapi-template is `backend/pyproject.toml` + `frontend/`, not a
+// root signal. Without this, `serve`/`init` silently no-op on those repos and
+// the tool looks broken on first run.
+//
+// Deliberately shallow (immediate children only) and advisory: we don't pick a
+// root, we surface what we found so the CLI can suggest `--root <dir>`. Returns
+// [{ dir, stacks: string[] }] for each child that detects at least one stack.
+export function suggestNestedRoots(root) {
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const found = [];
+  for (const e of entries) {
+    if (!e.isDirectory() || e.name.startsWith(".") || SKIP_DIRS.has(e.name)) continue;
+    const stacks = detectStacks(join(root, e.name));
+    if (stacks.size > 0) found.push({ dir: e.name, stacks: [...stacks] });
+  }
+  return found;
 }

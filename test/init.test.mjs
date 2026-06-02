@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,6 +108,34 @@ test("runInit refuses to clobber a malformed .mcp.json", () => {
   assert.equal(code, 1);
   assert.equal(readFileSync(target, "utf8"), "{ not valid json", "left the bad file untouched");
   assert.match(errs.join("\n"), /isn't valid JSON/i);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("bare init advises --root when the stack is in a subdir, and writes nothing", () => {
+  const root = mkdtempSync(join(tmpdir(), "zc-init-"));
+  mkdirSync(join(root, "backend"));
+  writeFileSync(join(root, "backend", "pyproject.toml"), 'dependencies = ["fastapi"]\n');
+
+  const out = [];
+  // No `root` => bare `init` from this cwd; the advisory should fire.
+  const code = runInit({ cwd: root, log: (m) => out.push(m) });
+  const text = out.join("\n");
+  assert.equal(code, 0);
+  assert.ok(!existsSync(join(root, ".mcp.json")), "must not wire a no-op root config");
+  assert.match(text, /no rule set is active/i);
+  assert.match(text, /--root backend/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("an explicit --root is honored even when a sibling subdir has a stack", () => {
+  const root = mkdtempSync(join(tmpdir(), "zc-init-"));
+  mkdirSync(join(root, "backend"));
+  writeFileSync(join(root, "backend", "pyproject.toml"), 'dependencies = ["fastapi"]\n');
+
+  // root is passed explicitly (== the parent), so init writes instead of advising.
+  const code = runInit({ root, log: () => {} });
+  assert.equal(code, 0);
+  assert.ok(existsSync(join(root, ".mcp.json")), "explicit root writes the config");
   rmSync(root, { recursive: true, force: true });
 });
 

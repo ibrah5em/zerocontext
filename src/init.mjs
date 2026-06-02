@@ -10,8 +10,23 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { detectStacks, suggestNestedRoots } from "./detect.mjs";
+import { loadRuleSets } from "./rules.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+// When `root` has no active rule set but a subdirectory does, return [{ dir, sets }]
+// so init can point the user at it (e.g. `backend/` on full-stack-fastapi-template)
+// instead of wiring a config that serves nothing. Empty when the root is already
+// servable — or when nothing nearby is either.
+function nestedRootAdvice(root) {
+  const shipped = new Set(loadRuleSets().map((s) => s.name));
+  const rootActive = [...detectStacks(root)].some((s) => shipped.has(s));
+  if (rootActive) return [];
+  return suggestNestedRoots(root)
+    .map((n) => ({ dir: n.dir, sets: n.stacks.filter((s) => shipped.has(s)) }))
+    .filter((n) => n.sets.length > 0);
+}
 
 // Absolute path to the CLI that's running this. In a published install and in a source
 // checkout the layout is the same (files: bin, src, rules), so this relative hop holds.
@@ -80,6 +95,22 @@ export function runInit({
     log("\nOr let the Claude CLI do it:");
     log(`  ${claudeAddCommand(entry)}`);
     return 0;
+  }
+
+  // Advisory (the common first-run miss): the user ran a bare `init` in a repo whose
+  // ROOT has no servable stack, but a subdirectory does — the layout every popular
+  // full-stack template uses. Point them at it instead of silently wiring a no-op
+  // config. An explicit `--root` is always honored as intent (incl. `--root .`).
+  if (root == null) {
+    const advice = nestedRootAdvice(absRoot);
+    if (advice.length > 0) {
+      log("ZeroContext init — no rule set is active at this directory.\n");
+      for (const a of advice) log(`  Found a ${a.sets.join(", ")} project in ./${a.dir}`);
+      log("\nRe-run pointed at the subdirectory you work in:");
+      log(`  npx zerocontext init --root ${advice[0].dir}`);
+      log("\n(Or wire this directory anyway with `--root .` if that's intentional.)");
+      return 0;
+    }
   }
 
   // Never clobber a file we can't parse — a malformed `.mcp.json` is the user's, and may
