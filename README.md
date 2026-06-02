@@ -2,6 +2,14 @@
 
 > **Your AI tools waste tokens on rules you don't need right now. ZeroContext serves only the rules that match the code you're working on.**
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ibrah5em/zerocontext/main/demo/zerocontext.gif"
+       alt="analyze shows a CLAUDE.md keeps 1,568 rule tokens resident in every message; init writes one pointer; the agent editing app/main.py pulls only the 447-token FastAPI slice — 83% fewer rule tokens in the window"
+       width="820">
+</p>
+
+<p align="center"><sub><i>A real run on the bundled <a href="demo/fixture"><code>demo/fixture</code></a> project — your number will differ; run <code>analyze</code> on your own repo. Regenerate the GIF with <code>node demo/render.mjs</code>.</i></sub></p>
+
 `CLAUDE.md` and `.cursorrules` load *everything you've ever written* into every
 message — keeping rules resident in the window that have nothing to do with the code in
 front of you. ZeroContext is a local MCP server that inspects your project and hands the

@@ -1,0 +1,12 @@
+[project]
+name = "acme-api"
+version = "0.1.0"
+description = "ACME internal API"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "pydantic>=2.6",
+  "sqlalchemy>=2.0",
+  "alembic>=1.13",
+]
