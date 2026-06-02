@@ -108,10 +108,14 @@ test("shipped sets serve the right slice for representative paths", () => {
   const sets = loadRuleSets();
   const served = (path) => new Set(matchRuleSets(sets, path).map((s) => s.name));
 
-  // fastapi: app code in, tests + migrations out (the over-serve fix).
-  assert.ok(served("app/api/routers/users.py").has("fastapi"));
+  // fastapi: app code in, tests + migrations out (the over-serve fix). Real paths from
+  // the full-stack-fastapi-template, which is what these were dogfooded against.
+  assert.ok(served("app/api/routes/items.py").has("fastapi"));
+  assert.ok(served("app/core/config.py").has("fastapi")); // settings file still gets rules
   assert.ok(!served("tests/test_users.py").has("fastapi"));
   assert.ok(!served("alembic/versions/1a2b3c_create_users.py").has("fastapi"));
+  // Empty package markers shouldn't pull the whole routing rule set (dogfood finding).
+  assert.ok(!served("app/api/routes/__init__.py").has("fastapi"));
 
   // nextjs: the src/app layout now matches (the under-serve fix).
   assert.ok(served("src/app/page.tsx").has("nextjs"));
@@ -119,9 +123,15 @@ test("shipped sets serve the right slice for representative paths", () => {
   // drizzle: a single-file schema.ts now matches (the under-serve fix).
   assert.ok(served("src/schema.ts").has("node-postgres-drizzle"));
   assert.ok(served("schema.ts").has("node-postgres-drizzle"));
+  assert.ok(served("lib/db/queries.ts").has("node-postgres-drizzle"));
 
   // react-typescript: config + type-decl files no longer get component rules.
   assert.ok(served("src/Button.tsx").has("react-typescript"));
   assert.ok(!served("vite.config.ts").has("react-typescript"));
   assert.ok(!served("src/env.d.ts").has("react-typescript"));
+
+  // Spec files and __tests__/ dirs are tests too — no component/ORM rules (dogfood fix).
+  assert.ok(!served("src/Button.spec.tsx").has("react-typescript"));
+  assert.ok(!served("src/__tests__/util.ts").has("react-typescript"));
+  assert.ok(!served("lib/db/repo.spec.ts").has("node-postgres-drizzle"));
 });

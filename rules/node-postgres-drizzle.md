@@ -4,7 +4,7 @@ version: 1.0.0
 description: Node + Postgres + Drizzle ORM conventions — schema, queries, migrations
 stack_signals: [drizzle.config.ts, drizzle.config.js]
 globs: ["**/db/**/*.ts", "**/schema/**/*.ts", "**/schema.ts", "**/db.ts", "**/drizzle/**/*.ts", "**/drizzle.config.ts"]
-exclude: ["**/*.test.ts"]
+exclude: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"]
 ---
 
 # Node + Postgres + Drizzle conventions

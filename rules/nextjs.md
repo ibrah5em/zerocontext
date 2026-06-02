@@ -4,7 +4,7 @@ version: 1.0.0
 description: Next.js App Router conventions — server/client components, data, routing
 stack_signals: [next.config.js, next.config.mjs, next.config.ts]
 globs: ["app/**/*.tsx", "app/**/*.ts", "src/app/**/*.tsx", "src/app/**/*.ts"]
-exclude: ["**/*.test.tsx", "**/*.test.ts"]
+exclude: ["**/*.test.tsx", "**/*.test.ts", "**/*.spec.tsx", "**/*.spec.ts", "**/__tests__/**"]
 ---
 
 # Next.js (App Router) conventions
