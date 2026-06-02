@@ -15,7 +15,7 @@ npx zerocontext serve     # stdio MCP server: inspects your project, serves matc
 npx zerocontext analyze   # see how many rule tokens your CLAUDE.md / .cursorrules keeps in every message
 ```
 
-> 📊 **This repo's own `CLAUDE.md` keeps 1,563 rule tokens resident in every message's context window — ZeroContext keeps ~78% of them out, serving only the slice the task needs.**
+> 📊 **This repo's own `CLAUDE.md` keeps 1,913 rule tokens resident in every message's context window — ZeroContext keeps ~80% of them out, serving only the slice the task needs.**
 > Measured by `analyze` (o200k estimate; run it yourself below). This is a *window-scoping* number, not a lower bill: a preloaded `CLAUDE.md` is prompt-cached, so the real win is relevance + a smaller window. (Phase 0 A/B: just-in-time ran cost-neutral-to-higher end to end — we don't claim dollar savings.)
 
 ## See your own rule-token footprint in 5 seconds
@@ -29,22 +29,23 @@ ZeroContext analyze — rule tokens resident in every message
 Tokenizer: o200k_base (gpt-tokenizer) — proxy for Claude, ~±10–15% vs. Claude's exact count
 
 CLAUDE.md
-  1,563 tokens  ·  6,212 chars  ·  9 sections (avg 174 tok/section)
+  1,913 tokens  ·  7,533 chars  ·  9 sections (avg 213 tok/section)
   → resident in your context window on every message, relevant or not.
 
   With ZeroContext (just-in-time, 1 slice/task) — rule tokens resident in the window:
     fixed overhead     135 tok   (MCP instructions + get_rules schema, measured)
     + tool call(s)      40 tok   (assumption: agent writes 1 call)
-    + rule slice(s)    174 tok   (your avg section size)
-    = 349 tok resident   vs   1,563 tok preloaded (every message)
+    + rule slice(s)    213 tok   (your avg section size)
+    = 388 tok resident   vs   1,913 tok preloaded (every message)
 
-  → 78% fewer rule tokens in the window  (1,214 tok)
-  Break-even: ZeroContext keeps fewer resident once rules exceed ~349 tok. Yours: 1,563 ✓
+  → 80% fewer rule tokens in the window  (1,525 tok)
+  Break-even: ZeroContext keeps fewer resident once rules exceed ~388 tok. Yours: 1,913 ✓
   Scope, not $: this is window-resident rule tokens, not session cost — a cached
   CLAUDE.md is ~free to re-read, so the win is relevance, not a lower bill. [Phase 0 A/B]
 ```
 
-That's a real run on this repo — your numbers will differ, and bigger or polyglot rule
+That's a real run on this repo (snapshot 2026-06; the input is this repo's live
+`CLAUDE.md`, so re-run to refresh) — your numbers will differ, and bigger or polyglot rule
 files keep more out of the window. The percentage is the headline (tokenizer-robust); the
 absolute count is a labeled estimate. It measures **rule tokens resident in the window**,
 not session cost: a preloaded `CLAUDE.md` is prompt-cached, so ZeroContext's win is
