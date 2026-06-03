@@ -19,6 +19,10 @@ It uses the committed [`fixture/`](fixture), so the take is reproducible and sho
 
 ## Stage the take (once)
 
+**One-command path:** `bash demo/record.sh` stages the fixture, sanity-checks the MCP
+wiring, prints the prompt to paste, and starts `asciinema` (or tells you the screen-capture
+fallback). The manual steps below are what it does, if you'd rather run them yourself.
+
 ```bash
 cd demo/fixture
 node ../../bin/zerocontext.mjs init      # writes .mcp.json → spawns the local server
